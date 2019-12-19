@@ -1,0 +1,32 @@
+{
+  "@id": "workflow",
+  "@uri": "http://www.ingenico.com/schemas/web/workflow/1_0",
+  "ops": [
+    {
+      "@id": "import",
+      "minify": false,
+      "path": "web\\dist"
+    },
+    {
+      "@id": "packaging",
+      "binary": {
+        "@id": "binary",
+        "scheme": []
+      },
+      "build": "ALL",
+      "mode": "AMS",
+      "web": {
+        "@id": "data",
+        "appType": 0,
+        "domain": 998,
+        "range": 0
+      }
+    },
+    {
+      "@id": "sign",
+      "certificateType": "VERTICAL_WEB",
+      "mode": "Mock-Up"
+    }
+  ],
+  "targetPath": "dist/"
+}
