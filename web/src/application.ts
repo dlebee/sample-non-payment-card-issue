@@ -32,7 +32,7 @@ export class Application
         const regRequest = {
             "applicable_transactions": ["0"],
             "web": {
-                "id": "E829AB3A", // <-- your tetra id.
+                "id": "5F5CA890", // <-- your tetra id.
                 "srv_type": "2",
                 "display_name": applicationName,
                 "dol": ["tran_status", "auth_amt"]
@@ -52,6 +52,7 @@ export class Application
             data: requestData
         });
 
+        const application = this;
         tetra.waas('ingenico.coreapp.T3CoreService')
             .on('invoke', function(this: any, data: any) {
 
@@ -61,7 +62,8 @@ export class Application
                 //Return response + status of the invocation to Core Application
                 const dataObj = JSON.parse(data.data);
 
-                this.paymentMode(dataObj);
+                console.log(dataObj);
+                application.paymentMode(dataObj);
 
                 /*
                 const connID = dataObj["$wp_connId"];
