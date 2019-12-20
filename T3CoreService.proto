@@ -1,0 +1,18 @@
+package ingenico.coreapp;
+// Method request.
+message InvokeRequest
+{
+required string invoke_request = 1;
+}
+// Method response.
+message InvokeResponse
+{
+required string invoke_response = 1;
+required string invoke_status = 2;
+}
+// Service definition.
+service T3CoreService
+{
+// Service method (@ref ingenico::service::Permissions::ALL).
+rpc invoke (InvokeRequest) returns (InvokeResponse);
+}
