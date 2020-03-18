@@ -4,6 +4,10 @@ declare global {
     var tetra: any;
 }
 
+const WEB_STATUS_SUCCESS = 0;
+const WEB_STATUS_FAILURE = 1;
+const WEB_STATUS_INVALID_PARAM = 2;
+
 export class Application
 {
     constructor(private $app: JQuery<HTMLElement>) {
@@ -30,15 +34,29 @@ export class Application
 
 
         const regRequest = {
-            "applicable_transactions": ["0"],
             "web": {
-                "id": "5F5CA890", // <-- your tetra id.
-                "srv_type": "2",
-                "display_name": applicationName,
-                "dol": ["tran_status", "auth_amt"]
+                "id": "6AD74E90", 
+                "display_name": "Sample APP"
             },
-            "core": {
-                "dol": ["tran_amt"]
+            "reg_1": {
+                "applicable_transactions": ["0"],
+                "web": {
+                    "srv_type": "2",
+                    "dol": ["tran_status", "auth_amt"]
+                },
+                "core": {
+                    "dol": ["tran_amt", "srv_type"]
+                }
+            },
+            "reg_2": {
+                "applicable_transactions": ["0"],
+                "web": {
+                    "srv_type": "3",
+                    "dol": <string[]>[]
+                },
+                "core": {
+                    "dol": ["tran_amt", "srv_type"]
+                } 
             }
         };
 
@@ -50,38 +68,27 @@ export class Application
         // then connects to the service
         serviceRegister.connect().call('RegisterApp', {
             data: requestData
-        });
+        })
+            .then(function(response: any) {
+                console.log(response);
+            })
+            .disconnect();
 
         const application = this;
         tetra.waas('ingenico.coreapp.T3CoreService')
-            .on('invoke', function(this: any, data: any) {
+            .on('invoke', function(this: any, response: any) {
 
                 //Perform the desired processing
                 console.log("I'm a Pay with non-payment cards");
 
                 //Return response + status of the invocation to Core Application
-                const dataObj = JSON.parse(data.data);
-
-                console.log(dataObj);
-                application.paymentMode(dataObj);
-
-                /*
-                const connID = dataObj["$wp_connId"];
-
-                var response = {
-                    "web":{
-                        "tran_status": 0,
-                        "auth_amt": 500,
-                    }
-                };
-
-                var invokeResponse = JSON.stringify(response);
-                this.sendResponse({
-                    invoke_response: invokeResponse, 
-                    invoke_status: WEB_STATUS_SUCCESS
-                }, {
-                    connectionId: connID
-                });*/
+                const dataObj = JSON.parse(response.data);
+                const invokeRequest = JSON.parse(dataObj.invoke_request);
+                if (invokeRequest.core && invokeRequest.core.srv_type == 3) {
+                    application.afterTransactionService(dataObj, this);
+                } else {
+                    application.paymentMode(dataObj, this);
+                }
             })
             .start();
     }
@@ -95,11 +102,61 @@ export class Application
         }).appendTo(this.$app);
     }
 
-    private paymentMode(data: any) {
+    private paymentMode(data: any, transactionScope: any) {
+
+        tetra.weblet.show();
         this.$app.empty();
-        
+
+    
+        $('<button>', {
+            html: 'complete'
+        }).appendTo(this.$app).click(() => {
+            
+            tetra.weblet.hide();
+            const connectionId = data["$wp_connId"];
+            const invokeRequest = JSON.parse(data.invoke_request);
+            const amount = invokeRequest.core.tran_amt;
+            const response = {
+                "web":{
+                    "tran_status": 0,
+                    "auth_amt": amount,
+                }
+            };
+
+            var invokeResponse = JSON.stringify(response);
+            
+            transactionScope.sendResponse({
+                invoke_response: invokeResponse, 
+                invoke_status: WEB_STATUS_SUCCESS
+            }, {
+                connectionId: connectionId
+            });
+        });
+
         $('<pre>', {
             html: `Received: ${JSON.stringify(data, null, 2)}`
         }).appendTo(this.$app);
+
+
+    }
+
+    private afterTransactionService(data: any, transactionScope: any) {
+
+        tetra.weblet.show();
+        this.$app.empty();
+
+        $('<button>', {
+            text: 'complete',
+        }).appendTo(this.$app).click(() => {
+            tetra.weblet.hide();
+            const connectionId = data["$wp_connId"];
+            transactionScope.sendResponse({
+                invoke_response: {},
+                invoke_status: WEB_STATUS_SUCCESS
+            }, {
+                connectionId: connectionId
+            });
+        });      
+
     }
 }
