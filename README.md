@@ -1,6 +1,6 @@
 # Sample
 
-This sample displays the issue we have, we are trying to integrate with the feature Non Payment Card of the Core app Services.
+This sample displays the issue we have, we are trying to integrate multi registration of non payment card and after transaction service.
 
 # How to build 
 
@@ -14,73 +14,91 @@ Once node_modules are install you can run
 
 # In application.ts we do the following.
 
-> It does work because we see our application when we start a Sale with the core application, we can select Sample APP.
+> the application registration returns status 0 (non registered event though we follow the guidelines of multiple registration)
 
-The **issue** is when we select the Sample APP to do a **NON PAYMENT CARD** it never opens the sample app and just crashes the home screen.
+see [application file](./web/src/application.ts)
 
-```ts
-private initializeTetra() {
+based on documentation that says
 
-    const serviceRegister = tetra.service({
-        service: 'local.service.T3CoreService',
-        namespace: 'ingenico.coreapp'
-    });
+```
 
-    let applicationName: string = 'Sample APP';
+ The keyword “reg_n” (n can be “1”, “2” or “3”) is crucial and it is case sensitive.
+- Registration request in legacy mode remains supported (Mono Registration service) as shown in
+the code sample below
+- In some cases, the payment application couldn’t treat a registration request for being busy with
+another processing. In that case, the Web App launcher will receive an error which indicates that
+the payment application is busy (See section 8.2.1).
 
+```
 
-    const regRequest = {
-        "applicable_transactions": ["0"],
-        "web": {
-            "id": "E829AB3A", // <-- your tetra id.
-            "srv_type": "2",
-            "display_name": applicationName,
-            "dol": ["tran_status", "auth_amt"]
-        },
-        "core": {
-            "dol": ["tran_amt"]
-        }
-    };
+Sample shows
 
-    let request = JSON.stringify(regRequest);
-    let requestData = {
-        'registration_request': request
+```js
+//The code below registers a Web App with an ID set to “ABCD1234” then checks if it was successfully registered.
+var register_cfg = {
+  "web": {
+    "id": "ABCD1234", //Web App ID
+    "display_name": "Sample App", //display name
+  },
+  "reg_1": {
+    "applicable_transactions": ["0", "3"], //sale & return
+    "web": {
+      "srv_type": "3", // After transaction
+      "dol": [] // Web service output parameters
+    },
+    "core": {
+      "dol": [] //Web service input parameters
     }
-
-    // then connects to the service
-    serviceRegister.connect().call('RegisterApp', {
-        data: requestData
-    });
-
-    tetra.waas('ingenico.coreapp.T3CoreService')
-        .on('invoke', function(this: any, data: any) {
-
-            //Perform the desired processing
-            console.log("I'm a Pay with non-payment cards");
-
-            //Return response + status of the invocation to Core Application
-            const dataObj = JSON.parse(data.data);
-
-            this.paymentMode(dataObj);
-
-            /*
-            const connID = dataObj["$wp_connId"];
-
-            var response = {
-                "web":{
-                    "tran_status": 0,
-                    "auth_amt": 500,
-                }
-            };
-
-            var invokeResponse = JSON.stringify(response);
-            this.sendResponse({
-                invoke_response: invokeResponse, 
-                invoke_status: WEB_STATUS_SUCCESS
-            }, {
-                connectionId: connID
-            });*/
-        })
-        .start();
+  },
+  "reg_2": {
+    "applicable_transactions": ["0"], //sale & return
+    "web": {
+      "srv_type": "2", // Pay with non-payment cards
+      "dol": ["tran_status", "auth_amt", "tran_date", "tran_time"] // Web service output parameters
+    },
+    "core": {
+      "dol": [“tran_amt”] //Web service input parameters
+    }
+  },
+  "reg_3": {
+    "applicable_transactions": ["0", "3"], //sale & return
+    "web": {
+      "srv_type": "1", // Before transaction
+      "dol": ["tran_amt"] // Web service output parameters
+    },
+    "core": {
+      "dol": ["tran_amt"] //Web service input parameters
+    }
+  }
+};
+var register_service = tetra.service({
+  service: 'local.service.T3CoreService',
+  namespace: 'ingenico.coreapp'
+});
+var reg_request = JSON.stringify(register_cfg);
+var Data = {
+  'registration_request': reg_request
 }
+register_service
+  .connect()
+  .call('RegisterApp',
+    {
+      data: Data
+    }
+  )
+  .then(function (response) {
+    var res = parseInt(response.registration_status);
+    switch (res) {
+      case 0:
+        alert("Application not registered");
+        break;
+      case 1:
+        alert("Application registered");
+        break;
+      default:
+        alert("An error occured");
+        break;
+    }
+  })
+  .disconnect();
 ```
