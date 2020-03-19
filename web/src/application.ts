@@ -25,13 +25,7 @@ export class Application
 
     private initializeTetra() {
 
-        const serviceRegister = tetra.service({
-            service: 'local.service.T3CoreService',
-            namespace: 'ingenico.coreapp'
-        });
-
-        let applicationName: string = 'Sample APP';
-
+      
 
         const regRequest = {
             "web": {
@@ -45,7 +39,7 @@ export class Application
                     "dol": ["tran_status", "auth_amt"]
                 },
                 "core": {
-                    "dol": ["tran_amt", "srv_type"]
+                    "dol": ["tran_amt"]
                 }
             },
             "reg_2": {
@@ -55,7 +49,7 @@ export class Application
                     "dol": <string[]>[]
                 },
                 "core": {
-                    "dol": ["tran_amt", "srv_type"]
+                    "dol": ["tran_amt"]
                 } 
             }
         };
@@ -66,9 +60,16 @@ export class Application
         }
 
         // then connects to the service
-        serviceRegister.connect().call('RegisterApp', {
-            data: requestData
-        })
+        const registerService = tetra.service({
+            service: 'local.service.T3CoreService',
+            namespace: 'ingenico.coreapp'
+        });
+            
+        registerService
+            .connect()
+            .call('RegisterApp', {
+                data: requestData
+            })
             .then(function(response: any) {
                 console.log(response);
             })
